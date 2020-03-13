@@ -18,8 +18,11 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
+	// 1
+	fs := http.FileServer(http.Dir("./static"))
 	// 2
 	router := mux.NewRouter()
+	router.Handle("/", fs)
 	router.HandleFunc("/msg", longLatHandler).Methods("POST")
 	router.HandleFunc("/ws", wsHandler)
 	go echo()

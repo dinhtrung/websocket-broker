@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!-- saved from url=(0049)https://software.hixie.ch/utilities/js/websocket/ -->
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>WebSocket console</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <script>
+    onerror = function(msg) {
+      log(msg);
+    }
+
+    function log(msg) {
+      document.getElementById('log').appendChild(document.createTextNode(new Date() + '   ' + msg + '\n'));
+    }
+
+    function status(msg) {
+      log(msg);
+      document.getElementById('status').textContent = msg;
+    }
+  </script>
+  <script>
+    var socket;
+
+    function connect() {
+      var url = document.getElementById('url').value;
+      var protocol = document.getElementById('protocol').value;
+      if (protocol == '')
+        socket = new WebSocket(url);
+      else
+        socket = new WebSocket(url, protocol);
+      status('Connecting to "' + url + '" with protocol "' + protocol + '"...');
+      socket.onopen = function(event) {
+        status('Connected to "' + socket.url + '".');
+      };
+      socket.onmessage = function(event) {
+        log('RCVD: ' + event.data);
+      };
+      socket.onclose = function(event) {
+        status('Disconnected.');
+      };
+    }
+
+    function disconnect() {
+      if (socket) {
+        status('Disconnecting.');
+        socket.close();
+      } else {
+        log('Not connected.');
+      }
+    }
+
+    function send() {
+      if (socket) {
+        socket.send(document.getElementById('text').value);
+        log('SENT: ' + document.getElementById('text').value);
+      } else {
+        log('Not connected.');
+      }
+    }
+
+    function send100() {
+      if (socket) {
+        for (var i = 0; i < 100; i += 1) {
+          socket.send('test' + i);
+          log('SENT: test' + i);
+        }
+      } else {
+        log('Not connected.');
+      }
+    }
+
+    function update() {
+      if (socket) {
+        document.getElementById('readyState').textContent = socket.readyState;
+        document.getElementById('bufferedAmount').textContent = socket.bufferedAmount;
+      } else {
+        document.getElementById('readyState').textContent = '-';
+        document.getElementById('bufferedAmount').textContent = '-';
+      }
+    }
+
+    function clearLogs() {
+      console.log('Clearing liongs');
+      document.getElementById('log').innerHTML = '';
+    }
+
+    setInterval(update, 10);
+  </script>
+</head>
+
+<body>
+  <div class="container-fluid my-3">
+    <div class="card">
+      <div class="card-header d-flex form-inline">
+        <div class="input-group mr-2">
+          <div class="input-group-prepend">
+            <span class="input-group-text">WebSocket URL:</span>
+          </div>
+          <input class="form-control" id="url" type="url" size="80" value="ws://localhost:18844/ws">
+        </div>
+        <div class="input-group mr-2">
+          <div class="input-group-prepend">
+            <span class="input-group-text">Protocol:</span>
+          </div>
+          <input class="form-control" id="protocol" type="text" size="10" value=""></label>
+        </div>
+        <div class="btn-group float-right">
+          <input class="btn btn-primary" type="button" value="Connect" onclick="connect()">
+          <input class="btn btn-danger" type="button" value="Disconnect" onclick="disconnect()">
+          <input class="btn btn-warning" type="button" value="Spam 100 packets" onclick="send100()">
+          <input class="btn btn-success" type="button" value="Clear Logs" onclick="clearLogs()">
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="d-flex">
+          <p class="text-danger w-50">Status: <span id="readyState">-</span> <span id="status">Idle</span></p>
+          <p class="text-danger w-50">Buffer: <span id="bufferedAmount">-</span> bytes</p>
+        </div>
+        <textarea class="form-control" id="text" type="text" rows="4" cols="80"></textarea>
+        <input class="btn btn-info float-right" type="button" value="Send" onclick="send()">
+      </div>
+      <div class="card-footer">
+        <pre id="log"></pre>
+      </div>
+
+    </div>
+  </div>
+</body>
+
+</html>
