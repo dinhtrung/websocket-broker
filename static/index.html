@@ -109,7 +109,7 @@
         <div class="btn-group float-right">
           <input class="btn btn-primary" type="button" value="Connect" onclick="connect()">
           <input class="btn btn-danger" type="button" value="Disconnect" onclick="disconnect()">
-          <input class="btn btn-warning" type="button" value="Spam 100 packets" onclick="send100()">
+          <input class="btn btn-warning  d-none" type="button" value="Spam 100 packets" onclick="send100()">
           <input class="btn btn-success" type="button" value="Clear Logs" onclick="clearLogs()">
         </div>
       </div>
@@ -118,8 +118,8 @@
           <p class="text-danger w-50">Status: <span id="readyState">-</span> <span id="status">Idle</span></p>
           <p class="text-danger w-50">Buffer: <span id="bufferedAmount">-</span> bytes</p>
         </div>
-        <textarea class="form-control" id="text" type="text" rows="4" cols="80"></textarea>
-        <input class="btn btn-info float-right" type="button" value="Send" onclick="send()">
+        <textarea class="form-control d-none" id="text" type="text" rows="4" cols="80"></textarea>
+        <input class="btn btn-info float-right  d-none" type="button" value="Send" onclick="send()">
       </div>
       <div class="card-footer">
         <pre id="log"></pre>

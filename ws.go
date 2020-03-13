@@ -19,10 +19,11 @@ var upgrader = websocket.Upgrader{
 
 func main() {
 	// 1
-	fs := http.FileServer(http.Dir("./static"))
+	// fs := http.FileServer(http.Dir("./static"))
 	// 2
 	router := mux.NewRouter()
-	router.Handle("/", fs)
+	// router.Handle("/", fs)
+	router.Handle("/", http.FileServer(AssetFile()))
 	router.HandleFunc("/msg", longLatHandler).Methods("POST")
 	router.HandleFunc("/ws", wsHandler)
 	go echo()

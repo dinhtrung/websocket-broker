@@ -8,8 +8,17 @@ This app is a simple websocket server that have the following function:
 
 ## Build and Run
 
+
 ```
 $ go build ws.go
 $ ./ws
 ```
 
+With bundle
+
+
+```
+$ go get -u github.com/go-bindata/go-bindata/...
+$ ~/go/bin/go-bindata -fs -prefix "static/" static/
+$ go build ws.go bindata.go
+```
