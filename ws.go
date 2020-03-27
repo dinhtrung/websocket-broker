@@ -26,6 +26,8 @@ func main() {
 	router.Handle("/", http.FileServer(AssetFile()))
 	router.HandleFunc("/msg", longLatHandler).Methods("POST")
 	router.HandleFunc("/ws", wsHandler)
+	router.HandleFunc("/ws-hanoi", wsHandler)
+	router.HandleFunc("/ws-hcm", wsHandler)
 	go echo()
 	log.Printf("Websocket server on port: :18844")
 	log.Fatal(http.ListenAndServe(":18844", router))
