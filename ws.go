@@ -1,8 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
+	"bufio"
 	"log"
+	"io/ioutil"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -18,10 +20,16 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
+	// 0 - setup TCP connection
+	// listen on all interfaces
+	ln, _ := net.Listen("tcp", ":15000")
+	go handleTcpMsg(ln)
 	// 1
-	// fs := http.FileServer(http.Dir("./static"))
+	fs := http.FileServer(http.Dir("./static"))
 	// 2
 	router := mux.NewRouter()
+	router.Handle("/", fs)// handle tcpMsg
+
 	// router.Handle("/", fs)
 	router.Handle("/", http.FileServer(AssetFile()))
 	router.HandleFunc("/msg", longLatHandler).Methods("POST")
@@ -53,6 +61,32 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	clients[ws] = true
 }
 
+func handleTcpMsg(ln net.Listener) {
+	defer ln.Close()
+	log.Printf("listen for messages on port 15000")
+	for {
+			rw, e := ln.Accept()
+			if e != nil {
+					log.Fatal(e)
+			}
+			go handleTcpConnection(rw)
+	}
+}
+
+func handleTcpConnection(c net.Conn) {
+	log.Printf("New connection established: %s", c.RemoteAddr().String())
+	// run loop forever (or until ctrl-c)
+	for {
+		// will listen for message to process ending in newline (\n)
+		message, err := bufio.NewReader(c).ReadString('\n')
+		if err != nil {
+			// handle error
+			return
+		}
+		go writer(message)
+	}
+	c.Close()
+}
 // 3
 func echo() {
 	for {
