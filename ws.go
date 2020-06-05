@@ -18,6 +18,7 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+var kvStorage = make(map[string]string)
 
 func main() {
 	// 0 - setup TCP connection
@@ -31,7 +32,8 @@ func main() {
 	router.Handle("/", fs)// handle tcpMsg
 
 	// router.Handle("/", fs)
-	router.Handle("/", http.FileServer(AssetFile()))
+	router.HandleFunc("/kv/{key}", kvSave).Methods("POST")
+	router.HandleFunc("/kv/{key}", kvGet).Methods("GET")
 	router.HandleFunc("/msg", longLatHandler).Methods("POST")
 	router.HandleFunc("/ws", wsHandler)
 	router.HandleFunc("/ws-hanoi", wsHandler)
@@ -59,6 +61,22 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New client connected")
 	// register client
 	clients[ws] = true
+}
+
+func kvSave(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	vars := mux.Vars(r)
+	key := vars["key"]
+	body, _ := ioutil.ReadAll(r.Body)
+	kvStorage[key] = string(body)
+	w.Write(body)
+}
+
+func kvGet(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	vars := mux.Vars(r)
+	key := vars["key"]
+	w.Write([]byte(kvStorage[key]))
 }
 
 func handleTcpMsg(ln net.Listener) {
