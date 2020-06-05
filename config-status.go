@@ -24,7 +24,7 @@ func doCheckStatus(host string) {
 	remoteHost := host + "smsct.vnpt.vn"
 	remotePath := ":/tango/config/*"
 	localPath := "/tango/data/config/live/" + host
-	rsyncCmd := exec.Command("/bin/rsync", "-a", "--delete", remoteHost + remotePath, localPath + "/")
+	rsyncCmd := exec.Command("/bin/rsync", "-a", "--delete", "--exclude", ".*", remoteHost + remotePath, localPath + "/")
 	rsyncOut, err := rsyncCmd.Output()
 	if err != nil {
 		log.Printf("Error running rsync: %s", err)
