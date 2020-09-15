@@ -2,8 +2,9 @@ package main
 
 import (
 	"bufio"
-	"log"
+	"github.com/namsral/flag"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 
@@ -20,34 +21,42 @@ var upgrader = websocket.Upgrader{
 }
 var kvStorage = make(map[string]string)
 
+// Flag options
+type FlagOptions struct {
+	Http    string
+	Tcp     string
+	WsPath  string
+	MsgPath string
+	KeyPath string
+}
+
 func main() {
+	o := ParseFlagOptions()
 	// 0 - setup TCP connection
 	// listen on all interfaces
-	ln, _ := net.Listen("tcp", ":15000")
-	go handleTcpMsg(ln)
+	ln, _ := net.Listen("tcp", o.Tcp)
+	go handleTCPMsg(ln)
 	// 1
 	fs := http.FileServer(http.Dir("./static"))
 	// 2
 	router := mux.NewRouter()
-	router.Handle("/", fs)// handle tcpMsg
+	router.Handle("/", fs) // handle tcpMsg
 
 	// router.Handle("/", fs)
-	router.HandleFunc("/kv/{key}", kvSave).Methods("POST")
-	router.HandleFunc("/kv/{key}", kvGet).Methods("GET")
-	router.HandleFunc("/msg", longLatHandler).Methods("POST")
-	router.HandleFunc("/ws", wsHandler)
-	router.HandleFunc("/ws-hanoi", wsHandler)
-	router.HandleFunc("/ws-hcm", wsHandler)
+	router.HandleFunc(o.KeyPath+"/{key}", kvSave).Methods("POST")
+	router.HandleFunc(o.KeyPath+"/{key}", kvGet).Methods("GET")
+	router.HandleFunc(o.MsgPath, msgHandler).Methods("POST")
+	router.HandleFunc(o.WsPath, wsHandler)
 	go echo()
-	log.Printf("Websocket server on port: :18844")
-	log.Fatal(http.ListenAndServe(":18844", router))
+	log.Printf("Websocket server on port: " + o.Http)
+	log.Fatal(http.ListenAndServe(o.Http, router))
 }
 
 func writer(coord string) {
 	broadcast <- coord
 }
 
-func longLatHandler(w http.ResponseWriter, r *http.Request) {
+func msgHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, _ := ioutil.ReadAll(r.Body)
 	go writer(string(body))
@@ -79,19 +88,19 @@ func kvGet(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(kvStorage[key]))
 }
 
-func handleTcpMsg(ln net.Listener) {
+func handleTCPMsg(ln net.Listener) {
 	defer ln.Close()
 	log.Printf("listen for messages on port 15000")
 	for {
-			rw, e := ln.Accept()
-			if e != nil {
-					log.Fatal(e)
-			}
-			go handleTcpConnection(rw)
+		rw, e := ln.Accept()
+		if e != nil {
+			log.Fatal(e)
+		}
+		go handleTCPConnection(rw)
 	}
 }
 
-func handleTcpConnection(c net.Conn) {
+func handleTCPConnection(c net.Conn) {
 	log.Printf("New connection established: %s", c.RemoteAddr().String())
 	// run loop forever (or until ctrl-c)
 	for {
@@ -105,6 +114,7 @@ func handleTcpConnection(c net.Conn) {
 	}
 	c.Close()
 }
+
 // 3
 func echo() {
 	for {
@@ -120,4 +130,25 @@ func echo() {
 			}
 		}
 	}
+}
+
+func ParseFlagOptions() *FlagOptions {
+	o := &FlagOptions{
+		Http:    ":18844",
+		Tcp:     ":15000",
+		WsPath:  "/ws",
+		MsgPath: "/msg",
+		KeyPath: "/key",
+	}
+	flag.StringVar(&o.Http, "http", o.Http, "HTTP address to listen to")
+	flag.StringVar(&o.Tcp, "tcp", o.Tcp, "TCP address to listen to")
+	flag.StringVar(&o.WsPath, "wspath", o.WsPath, "HTTP path for web socket client to connect to")
+	flag.StringVar(&o.MsgPath, "msgpath", o.MsgPath, "HTTP path for sending message to")
+	flag.StringVar(&o.KeyPath, "keypath", o.KeyPath, "HTTP path for get and set consul data")
+	flag.Usage = func() {
+		log.Printf("Options:\n")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	return o
 }
