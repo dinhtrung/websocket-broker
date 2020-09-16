@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"github.com/namsral/flag"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+
+	"github.com/namsral/flag"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -19,12 +20,14 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+
+/* kvStorage store temporary data in a map */
 var kvStorage = make(map[string]string)
 
-// Flag options
+// FlagOptions contain runtime options
 type FlagOptions struct {
-	Http    string
-	Tcp     string
+	HTTP    string
+	TCP     string
 	WsPath  string
 	MsgPath string
 	KeyPath string
@@ -34,7 +37,7 @@ func main() {
 	o := ParseFlagOptions()
 	// 0 - setup TCP connection
 	// listen on all interfaces
-	ln, _ := net.Listen("tcp", o.Tcp)
+	ln, _ := net.Listen("tcp", o.TCP)
 	go handleTCPMsg(ln)
 	// 1
 	fs := http.FileServer(http.Dir("./static"))
@@ -48,30 +51,33 @@ func main() {
 	router.HandleFunc(o.MsgPath, msgHandler).Methods("POST")
 	router.HandleFunc(o.WsPath, wsHandler)
 	go echo()
-	log.Printf("Websocket server on port: " + o.Http)
-	log.Fatal(http.ListenAndServe(o.Http, router))
+	log.Printf("Websocket server on port: " + o.HTTP)
+	log.Fatal(http.ListenAndServe(o.HTTP, router))
 }
 
+/* writer write message into channel */
 func writer(coord string) {
 	broadcast <- coord
 }
 
+/* msgHandler read message send from HTTP server and push it into channel */
 func msgHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, _ := ioutil.ReadAll(r.Body)
 	go writer(string(body))
 }
 
+/* wsHandler handle new websocket connection */
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("New client connected")
-	// register client
 	clients[ws] = true
 }
 
+/* kvSave store the value on specified key */
 func kvSave(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	vars := mux.Vars(r)
@@ -81,6 +87,7 @@ func kvSave(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+/* kvGet return value stored on provided key */
 func kvGet(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	vars := mux.Vars(r)
@@ -88,6 +95,7 @@ func kvGet(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(kvStorage[key]))
 }
 
+/* handleTCPMsg open a new TCP server and listen for new messages */
 func handleTCPMsg(ln net.Listener) {
 	defer ln.Close()
 	log.Printf("listen for messages on port 15000")
@@ -100,6 +108,7 @@ func handleTCPMsg(ln net.Listener) {
 	}
 }
 
+/* handleTCPConnection receive message from TCP Connection and send into channel */
 func handleTCPConnection(c net.Conn) {
 	log.Printf("New connection established: %s", c.RemoteAddr().String())
 	// run loop forever (or until ctrl-c)
@@ -115,7 +124,7 @@ func handleTCPConnection(c net.Conn) {
 	c.Close()
 }
 
-// 3
+/* Send the messsages received on msgHandler to connected websocket clients */
 func echo() {
 	for {
 		val := <-broadcast
@@ -132,16 +141,17 @@ func echo() {
 	}
 }
 
+// ParseFlagOptions parse runtime flag from environment variables or flags.
 func ParseFlagOptions() *FlagOptions {
 	o := &FlagOptions{
-		Http:    ":18844",
-		Tcp:     ":15000",
+		HTTP:    ":18844",
+		TCP:     ":15000",
 		WsPath:  "/ws",
 		MsgPath: "/msg",
 		KeyPath: "/key",
 	}
-	flag.StringVar(&o.Http, "http", o.Http, "HTTP address to listen to")
-	flag.StringVar(&o.Tcp, "tcp", o.Tcp, "TCP address to listen to")
+	flag.StringVar(&o.HTTP, "http", o.HTTP, "HTTP address to listen to")
+	flag.StringVar(&o.TCP, "tcp", o.TCP, "TCP address to listen to")
 	flag.StringVar(&o.WsPath, "wspath", o.WsPath, "HTTP path for web socket client to connect to")
 	flag.StringVar(&o.MsgPath, "msgpath", o.MsgPath, "HTTP path for sending message to")
 	flag.StringVar(&o.KeyPath, "keypath", o.KeyPath, "HTTP path for get and set consul data")
